@@ -19,7 +19,7 @@ class TestCLIIntegration:
     def test_add_and_view_single_task(self):
         """Test adding a task and then viewing it."""
         # Add a task
-        task = self.cli.task_service.add("Test Task", "Test Description")
+        task = self.cli.task_service.add_task("Test Task", "Test Description")
 
         # Verify the task was added
         assert task is not None
@@ -38,9 +38,9 @@ class TestCLIIntegration:
     def test_add_and_view_multiple_tasks(self):
         """Test adding multiple tasks and viewing them all."""
         # Add multiple tasks
-        task1 = self.cli.task_service.add("Task 1", "Description 1")
-        task2 = self.cli.task_service.add("Task 2", "Description 2")
-        task3 = self.cli.task_service.add("Task 3", "Description 3")
+        task1 = self.cli.task_service.add_task("Task 1", "Description 1")
+        task2 = self.cli.task_service.add_task("Task 2", "Description 2")
+        task3 = self.cli.task_service.add_task("Task 3", "Description 3")
 
         # Verify tasks were added
         assert task1 is not None
@@ -62,7 +62,7 @@ class TestCLIIntegration:
     def test_add_and_update_task(self):
         """Test adding a task and then updating it."""
         # Add a task
-        task = self.cli.task_service.add("Original Task", "Original Description")
+        task = self.cli.task_service.add_task("Original Task", "Original Description")
 
         # Verify the task was added
         assert task is not None
@@ -86,7 +86,7 @@ class TestCLIIntegration:
     def test_add_and_delete_task(self):
         """Test adding a task and then deleting it."""
         # Add a task
-        task = self.cli.task_service.add("Task to Delete", "Description")
+        task = self.cli.task_service.add_task("Task to Delete", "Description")
 
         # Verify the task was added
         assert task is not None
@@ -106,7 +106,7 @@ class TestCLIIntegration:
     def test_add_and_toggle_completion(self):
         """Test adding a task and toggling its completion status."""
         # Add a task
-        task = self.cli.task_service.add("Task to Toggle", "Description")
+        task = self.cli.task_service.add_task("Task to Toggle", "Description")
 
         # Verify the task was added with completed=False
         assert task is not None
@@ -145,7 +145,7 @@ class TestCLIIntegration:
             with patch('sys.stdout', new_callable=io.StringIO) as fake_out:
                 # This would normally trigger the CLI add flow
                 # But we'll test the service method directly
-                task = self.cli.task_service.add("Test CLI Task", "Test CLI Description")
+                task = self.cli.task_service.add_task("Test CLI Task", "Test CLI Description")
 
                 assert task is not None
                 assert task.title == "Test CLI Task"
@@ -154,8 +154,8 @@ class TestCLIIntegration:
     def test_cli_view_command_with_tasks(self):
         """Test the CLI view functionality with tasks."""
         # Add some tasks
-        self.cli.task_service.add("View Task 1", "Description 1")
-        self.cli.task_service.add("View Task 2", "Description 2")
+        self.cli.task_service.add_task("View Task 1", "Description 1")
+        self.cli.task_service.add_task("View Task 2", "Description 2")
 
         # Get all tasks
         tasks = self.cli.task_service.get_all()
@@ -176,8 +176,8 @@ class TestCLIIntegration:
     def test_persistence_save_and_load(self):
         """Test saving and loading tasks from file."""
         # Add some tasks
-        task1 = self.cli.task_service.add("Persistent Task 1", "Description 1")
-        task2 = self.cli.task_service.add("Persistent Task 2", "Description 2")
+        task1 = self.cli.task_service.add_task("Persistent Task 1", "Description 1")
+        task2 = self.cli.task_service.add_task("Persistent Task 2", "Description 2")
 
         # Save to file
         self.cli.task_service.save_to_file()

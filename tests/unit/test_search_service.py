@@ -147,3 +147,70 @@ class TestSearchService:
         assert all(isinstance(task, Task) for task in results)
         # Verify it's the same object reference
         assert results[0] is self.tasks[0] or results[0] is self.tasks[4]
+
+
+class TestSearchWithScope:
+    """Unit tests for search with scope selection (Phase 11 - Enhanced Features)."""
+
+    def test_search_in_title_only(self):
+        """Test searching in title only."""
+        from src.ticklisto.services.search_service import search_tasks_with_scope
+        from src.ticklisto.models.task import Task, Priority
+        
+        tasks = [
+            Task(id=1, title="Work Report", description="Home assignment", priority=Priority.HIGH, categories=["work"]),
+            Task(id=2, title="Home Cleaning", description="Work on the house", priority=Priority.MEDIUM, categories=["home"]),
+            Task(id=3, title="Meeting Notes", description="Client meeting", priority=Priority.LOW, categories=["work"])
+        ]
+        
+        # Search for "work" in title only
+        results = search_tasks_with_scope(tasks, "work", scope="title")
+        
+        assert len(results) == 1
+        assert results[0].id == 1  # Only "Work Report" matches in title
+
+    def test_search_in_description_only(self):
+        """Test searching in description only."""
+        from src.ticklisto.services.search_service import search_tasks_with_scope
+        from src.ticklisto.models.task import Task, Priority
+        
+        tasks = [
+            Task(id=1, title="Work Report", description="Home assignment", priority=Priority.HIGH, categories=["work"]),
+            Task(id=2, title="Home Cleaning", description="Work on the house", priority=Priority.MEDIUM, categories=["home"]),
+            Task(id=3, title="Meeting Notes", description="Client meeting", priority=Priority.LOW, categories=["work"])
+        ]
+        
+        # Search for "work" in description only
+        results = search_tasks_with_scope(tasks, "work", scope="description")
+        
+        assert len(results) == 1
+        assert results[0].id == 2  # Only "Home Cleaning" has "work" in description
+
+    def test_search_in_both_fields(self):
+        """Test searching in both title and description."""
+        from src.ticklisto.services.search_service import search_tasks_with_scope
+        from src.ticklisto.models.task import Task, Priority
+        
+        tasks = [
+            Task(id=1, title="Work Report", description="Home assignment", priority=Priority.HIGH, categories=["work"]),
+            Task(id=2, title="Home Cleaning", description="Work on the house", priority=Priority.MEDIUM, categories=["home"]),
+            Task(id=3, title="Meeting Notes", description="Client meeting", priority=Priority.LOW, categories=["work"])
+        ]
+        
+        # Search for "work" in both fields
+        results = search_tasks_with_scope(tasks, "work", scope="both")
+        
+        assert len(results) == 2
+        assert {r.id for r in results} == {1, 2}  # Both tasks with "work" in title or description
+
+    def test_search_with_invalid_scope_raises_error(self):
+        """Test that invalid scope raises ValueError."""
+        from src.ticklisto.services.search_service import search_tasks_with_scope
+        from src.ticklisto.models.task import Task, Priority
+        
+        tasks = [
+            Task(id=1, title="Test", description="Test", priority=Priority.HIGH, categories=["work"])
+        ]
+        
+        with pytest.raises(ValueError, match="Invalid scope"):
+            search_tasks_with_scope(tasks, "test", scope="invalid")

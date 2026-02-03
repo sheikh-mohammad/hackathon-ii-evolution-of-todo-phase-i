@@ -23,7 +23,7 @@ class TestCLIContract:
         initial_count = len(self.cli.task_service.get_all())
 
         # Add a task
-        task = self.cli.task_service.add("Test Task", "Test Description")
+        task = self.cli.task_service.add_task("Test Task", "Test Description")
 
         # Verify task was added
         assert task is not None
@@ -34,8 +34,8 @@ class TestCLIContract:
     def test_view_command_contract(self):
         """Test that the view command follows the expected contract."""
         # Add some tasks
-        self.cli.task_service.add("Task 1", "Description 1")
-        self.cli.task_service.add("Task 2", "Description 2")
+        self.cli.task_service.add_task("Task 1", "Description 1")
+        self.cli.task_service.add_task("Task 2", "Description 2")
 
         # Get all tasks (simulating view command behavior)
         tasks = self.cli.task_service.get_all()
@@ -48,7 +48,7 @@ class TestCLIContract:
     def test_update_command_contract(self):
         """Test that the update command follows the expected contract."""
         # Add a task
-        task = self.cli.task_service.add("Original Task", "Original Description")
+        task = self.cli.task_service.add_task("Original Task", "Original Description")
 
         # Update the task
         success = self.cli.task_service.update(
@@ -66,7 +66,7 @@ class TestCLIContract:
     def test_delete_command_contract(self):
         """Test that the delete command follows the expected contract."""
         # Add a task
-        task = self.cli.task_service.add("Task to Delete", "Description")
+        task = self.cli.task_service.add_task("Task to Delete", "Description")
 
         # Delete the task
         success = self.cli.task_service.delete(task.id)
@@ -78,7 +78,7 @@ class TestCLIContract:
     def test_complete_command_contract(self):
         """Test that the complete command follows the expected contract."""
         # Add a task
-        task = self.cli.task_service.add("Task to Complete", "Description")
+        task = self.cli.task_service.add_task("Task to Complete", "Description")
 
         # Verify initial state
         assert task.completed is False
@@ -95,7 +95,7 @@ class TestCLIContract:
         """Test that command aliases work as expected."""
         # Test that different ways of calling commands work
         # Add command should work
-        task = self.cli.task_service.add("Alias Test", "Testing aliases")
+        task = self.cli.task_service.add_task("Alias Test", "Testing aliases")
         assert task is not None
 
         # View command should work

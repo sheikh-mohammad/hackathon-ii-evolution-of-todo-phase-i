@@ -57,6 +57,8 @@ class TickListoCLI:
                     self._handle_sort()
                 elif command in ['clear', 'clr']:
                     self._handle_clear()
+                elif command in ['delete all', 'dela']:
+                    self._handle_delete_all()
                 elif command in ['stats', 's']:  # Add stats command
                     self._handle_stats()
                 elif command in ['help', 'h']:
@@ -75,7 +77,7 @@ class TickListoCLI:
                 break
 
     def _handle_add(self):
-        """Handle the add command to create a new task."""
+        """Handle the add command to create a new task with required priority and categories (Phase 10 - User Story 6)."""
         self.task_service.rich_ui.display_info_message("Adding a new task:")
 
         title = Prompt.ask("Enter task title")
@@ -92,9 +94,76 @@ class TickListoCLI:
             self.task_service.display_error_message("Description cannot exceed 1000 characters.")
             return
 
-        # Add the task
+        # REQUIRED: Prompt for priority (Phase 10 - User Story 6)
+        priority = None
+        while priority is None:
+            priority_input = Prompt.ask(
+                "Enter task priority [bold](high/medium/low)[/bold] [red]*required[/red]"
+            ).strip().lower()
+
+            try:
+                from ..services.validation_service import validate_priority
+                priority = validate_priority(priority_input)
+            except ValueError as e:
+                self.task_service.display_error_message(str(e))
+                retry = Confirm.ask("Try again?", default=True)
+                if not retry:
+                    self.task_service.display_error_message("Task creation cancelled.")
+                    return
+
+        # REQUIRED: Prompt for categories (Phase 10 - User Story 6)
+        categories = None
+        while categories is None or len(categories) == 0:
+            self.console.print("\n[yellow]Suggested categories: work, home, personal[/yellow]")
+            categories_input = Prompt.ask(
+                "Enter task categories (comma-separated) [red]*required[/red]"
+            ).strip()
+
+            if not categories_input:
+                self.task_service.display_error_message("At least one category is required.")
+                retry = Confirm.ask("Try again?", default=True)
+                if not retry:
+                    self.task_service.display_error_message("Task creation cancelled.")
+                    return
+                continue
+
+            # Parse categories
+            categories = [cat.strip() for cat in categories_input.split(",") if cat.strip()]
+
+            if len(categories) == 0:
+                self.task_service.display_error_message("At least one category is required.")
+                retry = Confirm.ask("Try again?", default=True)
+                if not retry:
+                    self.task_service.display_error_message("Task creation cancelled.")
+                    return
+                categories = None
+
+        # Optional: Prompt for due date
+        due_date = None
+        has_due_date = Confirm.ask("Add a due date?", default=False)
+        if has_due_date:
+            due_date_input = Prompt.ask(
+                "Enter due date (MM/DD/YYYY, YYYY-MM-DD, or 'tomorrow', 'next week', etc.)"
+            ).strip()
+
+            if due_date_input:
+                try:
+                    from ..services.validation_service import validate_date_input
+                    due_date = validate_date_input(due_date_input)
+                except ValueError as e:
+                    self.task_service.display_error_message(f"Invalid date: {str(e)}")
+                    self.console.print("[yellow]Continuing without due date...[/yellow]")
+
+        # Add the task with all required fields
         try:
-            task = self.task_service.add_task(title.strip(), description)
+            task = self.task_service.add_task(
+                title.strip(),
+                description,
+                priority=priority,
+                categories=categories,
+                due_date=due_date
+            )
+            self.task_service.save_to_file()
             self.task_service.display_success_message(f"Task added successfully with ID: {task.id}")
         except ValueError as e:
             self.task_service.display_error_message(f"Failed to add task: {str(e)}")
@@ -104,7 +173,7 @@ class TickListoCLI:
         self.task_service.display_all_tasks_enhanced()
 
     def _handle_update(self):
-        """Handle the update command to modify a task."""
+        """Handle the update command with full re-entry of all fields (Phase 11 - Enhanced Features)."""
         self.task_service.rich_ui.display_info_message("Updating a task:")
 
         try:
@@ -120,35 +189,112 @@ class TickListoCLI:
             self.task_service.display_error_message(f"Task with ID {task_id} not found.")
             return
 
-        self.task_service.rich_ui.display_info_message(f"Current task: {task.title}")
+        # Display current values (Phase 11 - Enhanced Features)
+        self.console.print("\n[bold cyan]Current Task Details:[/bold cyan]")
+        self.console.print(f"  Title: {task.title}")
+        self.console.print(f"  Description: {task.description}")
+        self.console.print(f"  Priority: {task.priority.value}")
+        self.console.print(f"  Categories: {', '.join(task.categories)}")
+        self.console.print(f"  Due Date: {task.due_date.strftime('%Y-%m-%d') if task.due_date else 'None'}")
+        self.console.print(f"  Completed: {task.completed}\n")
 
-        # Get new values or keep current ones
-        new_title = Prompt.ask("Enter new title (or press Enter to keep current)", default=task.title)
+        self.console.print("[yellow]Please re-enter ALL fields (full re-entry required):[/yellow]\n")
 
-        # Validate title length
-        if new_title and (len(new_title.strip()) < 1 or len(new_title.strip()) > 200):
+        # Full re-entry: Title
+        new_title = Prompt.ask("Enter task title", default=task.title)
+
+        if not new_title or len(new_title.strip()) < 1 or len(new_title.strip()) > 200:
             self.task_service.display_error_message("Title must be between 1 and 200 characters.")
             return
 
-        new_description = Prompt.ask("Enter new description (or press Enter to keep current)",
-                                   default=task.description)
+        # Full re-entry: Description
+        new_description = Prompt.ask("Enter task description", default=task.description)
 
-        # Validate description length
         if len(new_description) > 1000:
             self.task_service.display_error_message("Description cannot exceed 1000 characters.")
             return
 
-        # Update the task
-        success = self.task_service.update_task(
-            task_id=task_id,
-            title=new_title if new_title != task.title else None,
-            description=new_description if new_description != task.description else None
-        )
+        # Full re-entry: Priority
+        new_priority = None
+        while new_priority is None:
+            priority_input = Prompt.ask(
+                "Enter task priority (high/medium/low)",
+                default=task.priority.value
+            ).strip().lower()
 
-        if success:
-            self.task_service.display_success_message(f"Task {task_id} updated successfully!")
-        else:
-            self.task_service.display_error_message(f"Failed to update task {task_id}. Please check your input.")
+            try:
+                from ..services.validation_service import validate_priority
+                new_priority = validate_priority(priority_input)
+            except ValueError as e:
+                self.task_service.display_error_message(str(e))
+                retry = Confirm.ask("Try again?", default=True)
+                if not retry:
+                    self.task_service.display_error_message("Task update cancelled.")
+                    return
+
+        # Full re-entry: Categories
+        new_categories = None
+        while new_categories is None or len(new_categories) == 0:
+            categories_input = Prompt.ask(
+                "Enter task categories (comma-separated)",
+                default=", ".join(task.categories)
+            ).strip()
+
+            if not categories_input:
+                self.task_service.display_error_message("At least one category is required.")
+                retry = Confirm.ask("Try again?", default=True)
+                if not retry:
+                    self.task_service.display_error_message("Task update cancelled.")
+                    return
+                continue
+
+            new_categories = [cat.strip() for cat in categories_input.split(",") if cat.strip()]
+
+            if len(new_categories) == 0:
+                self.task_service.display_error_message("At least one category is required.")
+                retry = Confirm.ask("Try again?", default=True)
+                if not retry:
+                    self.task_service.display_error_message("Task update cancelled.")
+                    return
+                new_categories = None
+
+        # Full re-entry: Due date
+        new_due_date = None
+        current_due_date_str = task.due_date.strftime('%Y-%m-%d') if task.due_date else ""
+
+        has_due_date = Confirm.ask("Add/update due date?", default=bool(task.due_date))
+        if has_due_date:
+            due_date_input = Prompt.ask(
+                "Enter due date (MM/DD/YYYY, YYYY-MM-DD, or 'tomorrow', 'next week', etc.)",
+                default=current_due_date_str
+            ).strip()
+
+            if due_date_input:
+                try:
+                    from ..services.validation_service import validate_date_input
+                    new_due_date = validate_date_input(due_date_input)
+                except ValueError as e:
+                    self.task_service.display_error_message(f"Invalid date: {str(e)}")
+                    self.console.print("[yellow]Continuing without due date...[/yellow]")
+
+        # Update the task with all new values
+        try:
+            updated_task = self.task_service.update_task(
+                task_id=task_id,
+                title=new_title.strip(),
+                description=new_description,
+                priority=new_priority,
+                categories=new_categories,
+                due_date=new_due_date
+            )
+
+            if updated_task:
+                self.task_service.save_to_file()
+                self.task_service.display_success_message(f"Task {task_id} updated successfully!")
+            else:
+                self.task_service.display_error_message(f"Failed to update task {task_id}.")
+        except ValueError as e:
+            self.task_service.display_error_message(f"Failed to update task: {str(e)}")
 
     def _handle_delete(self):
         """Handle the delete command to remove a task."""
@@ -220,7 +366,7 @@ class TickListoCLI:
         self.task_service.display_progress_stats_enhanced()
 
     def _handle_search(self):
-        """Handle the search command to find tasks by keyword."""
+        """Handle the search command to find tasks by keyword with scope selection (Phase 11 - Enhanced Features)."""
         self.task_service.rich_ui.display_info_message("Search tasks:")
 
         keyword = Prompt.ask("Enter search keyword")
@@ -229,22 +375,50 @@ class TickListoCLI:
             self.task_service.display_error_message("Search keyword cannot be empty.")
             return
 
+        # Prompt for search scope (Phase 11 - Enhanced Features)
+        self.console.print("\n[yellow]Search scope options:[/yellow]")
+        self.console.print("  1. Title only")
+        self.console.print("  2. Description only")
+        self.console.print("  3. Both title and description (default)\n")
+
+        scope_choice = Prompt.ask(
+            "Select search scope",
+            choices=["1", "2", "3"],
+            default="3"
+        )
+
+        # Map choice to scope
+        scope_map = {
+            "1": "title",
+            "2": "description",
+            "3": "both"
+        }
+        scope = scope_map[scope_choice]
+
         # Get all tasks
         all_tasks = self.task_service.list_tasks()
 
-        # Search tasks
-        results = self.search_service.search_tasks(all_tasks, keyword.strip())
+        # Search tasks with scope
+        try:
+            results = self.search_service.search_tasks_with_scope(all_tasks, keyword.strip(), scope)
 
-        if results:
-            self.task_service.rich_ui.display_success_message(
-                f"Found {len(results)} task(s) matching '{keyword}':"
-            )
-            self.task_service.rich_ui.display_tasks(results)
-        else:
-            self.task_service.rich_ui.display_warning_message(
-                f"No tasks found matching '{keyword}'."
-            )
-            self.console.print("\n[dim]Try different keywords or check your spelling.[/dim]\n")
+            if results:
+                scope_text = {
+                    "title": "in titles",
+                    "description": "in descriptions",
+                    "both": "in titles and descriptions"
+                }
+                self.task_service.rich_ui.display_success_message(
+                    f"Found {len(results)} task(s) matching '{keyword}' {scope_text[scope]}:"
+                )
+                self.task_service.rich_ui.display_tasks(results)
+            else:
+                self.task_service.rich_ui.display_warning_message(
+                    f"No tasks found matching '{keyword}' in selected scope."
+                )
+                self.console.print("\n[dim]Try different keywords, scope, or check your spelling.[/dim]\n")
+        except ValueError as e:
+            self.task_service.display_error_message(f"Search error: {str(e)}")
 
     def _handle_filter(self):
         """Handle the filter command to filter tasks by criteria."""
@@ -399,9 +573,55 @@ class TickListoCLI:
             self.task_service.display_error_message(f"Sort failed: {str(e)}")
 
     def _handle_clear(self):
-        """Handle the clear command to clear the console."""
-        self.console.clear()
-        self.task_service.rich_ui.display_success_message("Console cleared!")
+        """Handle the clear command to properly clear the terminal buffer (Phase 11 - Enhanced Features)."""
+        try:
+            from ..utils.terminal_utils import TerminalUtils
+
+            terminal_utils = TerminalUtils()
+            terminal_utils.clear_terminal()
+
+            self.task_service.rich_ui.display_success_message("Terminal cleared successfully!")
+        except RuntimeError as e:
+            # Fallback to Rich console clear if platform-specific clearing fails
+            self.console.clear()
+            self.task_service.rich_ui.display_warning_message(
+                f"Platform-specific clear failed ({str(e)}). Used fallback method."
+            )
+
+    def _handle_delete_all(self):
+        """Handle the delete all command to remove all tasks with confirmation (Phase 9 - User Story 5)."""
+        # Check if any tasks exist
+        if not self.task_service.tasks:
+            self.task_service.rich_ui.display_info_message("No tasks to delete.")
+            return
+
+        # Display warning and confirmation prompt
+        self.console.print("\n[bold red]⚠️  WARNING: Delete All Tasks[/bold red]")
+        self.console.print("This will permanently delete ALL tasks and reset the ID counter to 1.")
+        self.console.print("This action cannot be undone.\n")
+
+        # Prompt for confirmation
+        confirmed = Confirm.ask("Are you sure you want to continue?", default=False)
+
+        if not confirmed:
+            self.task_service.rich_ui.display_info_message("Delete all cancelled. No changes made.")
+            return
+
+        # Delete all tasks
+        result = self.task_service.delete_all()
+
+        if result:
+            # Reset ID counter
+            self.task_service.id_manager.reset_counter()
+
+            # Save to storage
+            self.task_service.save_to_file()
+
+            # Display success message
+            self.task_service.rich_ui.display_success_message("✓ All tasks deleted successfully")
+            self.console.print("[yellow]ID counter reset to 1[/yellow]\n")
+        else:
+            self.task_service.display_error_message("Failed to delete tasks.")
 
     def _handle_help(self):
         """Display help information with all available commands."""
@@ -426,6 +646,7 @@ class TickListoCLI:
             "view or v - View all tasks",
             "update or u - Update a task",
             "delete or d - Delete a task",
+            "delete all or dela - Delete all tasks with confirmation",
             "complete or c - Toggle task completion status",
             "search or find or f - Search tasks by keyword",
             "filter or fl - Filter tasks by criteria",

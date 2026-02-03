@@ -1,25 +1,32 @@
 # Tick Listo
 
-A command-line task management application that stores tasks in memory with temporary file persistence between sessions. Built with Python 3.14+ and Rich for beautiful console formatting.
+A command-line task management application with **persistent JSON storage** and advanced organization features. Built with Python 3.14+ and Rich for beautiful console formatting.
 
 ## Features
 
 ### Core Task Management
 - Add, view, update, delete, and mark tasks as complete/incomplete
-- Auto-generated sequential task IDs
+- **Auto-incrementing task IDs** (1, 2, 3...) that persist across sessions
+- **JSON file persistence** (ticklisto_data.json) - tasks survive application restarts
 - Rich-formatted console interface with visual status indicators
-- Temporary file persistence between sessions
 - Sub-second response times for all operations
 - Graceful error handling with informative messages
 
-### Advanced Organization (New!)
-- **Priority Levels**: Assign high, medium, or low priority to tasks
-- **Category Tags**: Organize tasks with multiple category labels
+### Advanced Organization
+- **Priority Levels** (REQUIRED): Assign high, medium, or low priority to every task
+- **Category Tags** (REQUIRED): Organize tasks with one or more category labels
 - **Due Dates**: Set deadlines with flexible date parsing (MM/DD/YYYY, natural language like "tomorrow", "next week")
-- **Search**: Find tasks by keyword in title or description
+- **Search with Scope**: Find tasks by keyword in title only, description only, or both
 - **Filter**: Filter tasks by status, priority, categories, and due dates
 - **Sort**: Sort tasks by due date, priority, or alphabetically
-- **Clear Console**: Clear the screen for a fresh view
+- **Delete All**: Remove all tasks at once with confirmation prompt
+- **Enhanced Clear**: Properly clear terminal buffer (not just scroll)
+
+### Data Persistence
+- **JSON Storage**: All tasks saved to `ticklisto_data.json` in the project directory
+- **Atomic Writes**: Safe file operations prevent data corruption
+- **ID Management**: Task IDs never reused during normal operation
+- **ID Reset**: After "delete all", ID counter resets to 1 for fresh start
 
 ## Prerequisites
 
@@ -59,45 +66,150 @@ python -m todo_app
 ### Available Commands
 
 #### Basic Commands
-- `add` or `a` - Add a new task with priority, categories, and due date
+- `add` or `a` - Add a new task (priority and categories REQUIRED)
 - `view` or `v` - View all tasks with enhanced formatting
-- `update` or `u` - Update a task's details
-- `delete` or `d` - Delete a task
+- `update` or `u` - Update a task (full re-entry of all fields required)
+- `delete` or `d` - Delete a single task
+- `delete all` or `dela` - Delete all tasks with confirmation
 - `complete` or `c` - Mark task as complete/incomplete
 - `stats` or `s` - View task statistics
 
-#### Organization Commands (New!)
-- `search` or `find` or `f` - Search tasks by keyword
+#### Organization Commands
+- `search` or `find` or `f` - Search tasks by keyword with scope selection
 - `filter` or `fl` - Filter tasks by status, priority, categories, or dates
 - `sort` or `sr` - Sort tasks by due date, priority, or title
-- `clear` or `clr` - Clear the console screen
+- `clear` or `clr` - Clear the terminal screen and buffer
 
 #### System Commands
 - `help` or `h` - Show help information
-- `quit` or `q` - Exit the application
+- `quit` or `q` - Save and exit the application
 
 ### Example Workflow
 
 1. Start the application: `python -m src.ticklisto`
-2. Add a task: Enter `add` or `a` and follow the prompts
+2. Add a task: Enter `add` or `a` and follow the prompts (priority and categories required)
 3. View tasks: Enter `view` or `v` to see all tasks
 4. Mark as complete: Enter `complete` or `c` and specify task ID
-5. Update task: Enter `update` or `u` and specify task ID
+5. Update task: Enter `update` or `u` and specify task ID (full re-entry required)
 6. Delete task: Enter `delete` or `d` and specify task ID
 7. Exit: Enter `quit` or `q` to save and exit
 
 ## Usage Examples
 
-### Working with Priorities and Categories
+### Adding Tasks (Priority and Categories Required)
 
-**Adding a task with priority and categories:**
+**Adding a task with required fields:**
 ```
 > add
 Enter task title: Complete project documentation
 Enter task description (optional): Write comprehensive docs for the new features
-Enter priority (high/medium/low) [medium]: high
-Enter categories (comma-separated, optional): work, documentation, urgent
-Enter due date (optional, e.g., MM/DD/YYYY, 'tomorrow', 'next week'): tomorrow
+Enter task priority (high/medium/low) *required: high
+Suggested categories: work, home, personal
+Enter task categories (comma-separated) *required: work, documentation, urgent
+Add a due date? (y/n): y
+Enter due date (MM/DD/YYYY, YYYY-MM-DD, or 'tomorrow', 'next week', etc.): tomorrow
+
+✓ Task added successfully with ID: 1
+```
+
+**Priority and categories are mandatory:**
+```
+> add
+Enter task title: Buy groceries
+Enter task description (optional):
+Enter task priority (high/medium/low) *required: [press Enter without input]
+❌ Priority is required. Must be one of: high, medium, low
+Try again? (y/n): y
+Enter task priority (high/medium/low) *required: medium
+Enter task categories (comma-separated) *required: home, shopping
+
+✓ Task added successfully with ID: 2
+```
+
+### JSON Persistence
+
+**Tasks persist across application restarts:**
+```
+Session 1:
+> add
+[Create tasks with IDs 1, 2, 3]
+> quit
+Tasks saved successfully. Goodbye!
+
+[Restart application]
+
+Session 2:
+> view
+[All tasks from Session 1 are still there with IDs 1, 2, 3]
+> add
+[New task gets ID 4]
+```
+
+**Data file location:**
+- All tasks stored in `ticklisto_data.json` in the project directory
+- File uses atomic write operations for data safety
+- Backup recommended before major operations
+
+### ID Management
+
+**IDs never reused during normal operation:**
+```
+> add
+Task added with ID: 1
+
+> add
+Task added with ID: 2
+
+> delete
+Enter task ID to delete: 1
+Task 1 deleted successfully!
+
+> add
+Task added with ID: 3  (NOT 1 - IDs never reused)
+```
+
+**ID counter resets after delete all:**
+```
+> view
+[Shows tasks with IDs 5, 7, 9]
+
+> delete all
+⚠️  WARNING: Delete All Tasks
+This will permanently delete ALL tasks and reset the ID counter to 1.
+Are you sure you want to continue? (y/n): y
+✓ All tasks deleted successfully
+ID counter reset to 1
+
+> add
+Task added with ID: 1  (Fresh start!)
+```
+
+### Updating Tasks (Full Re-entry Required)
+
+**Update requires re-entering all fields:**
+```
+> update
+Enter task ID to update: 3
+
+Current Task Details:
+  Title: Old Title
+  Description: Old Description
+  Priority: medium
+  Categories: work
+  Due Date: 2026-02-15
+  Completed: False
+
+Please re-enter ALL fields (full re-entry required):
+
+Enter task title [Old Title]: New Title
+Enter task description [Old Description]: New Description
+Enter task priority (high/medium/low) [medium]: high
+Enter task categories (comma-separated) [work]: work, urgent, client
+Add/update due date? (y/n): y
+Enter due date [2026-02-15]: next week
+
+✓ Task 3 updated successfully!
+```
 ```
 
 **Updating task priority:**
@@ -113,6 +225,122 @@ Enter new priority (high/medium/low) or press Enter to keep current: high
 Enter task ID to update: 3
 Enter new categories (comma-separated) or press Enter to keep current: work, client, urgent
 ```
+
+### Searching Tasks with Scope Selection
+
+**Search with scope selection (title, description, or both):**
+```
+> search
+Enter search keyword: documentation
+
+Search scope options:
+  1. Title only
+  2. Description only
+  3. Both title and description (default)
+
+Select search scope [3]: 1
+
+Found 2 task(s) matching 'documentation' in titles:
+[Displays tasks with "documentation" in title only]
+```
+
+**Search in description only:**
+```
+> search
+Enter search keyword: meeting
+Select search scope [3]: 2
+
+Found 3 task(s) matching 'meeting' in descriptions:
+[Displays tasks with "meeting" in description only]
+```
+
+**Search in both fields (default):**
+```
+> search
+Enter search keyword: project
+Select search scope [3]: 3
+
+Found 7 task(s) matching 'project' in titles and descriptions:
+[Displays all tasks with "project" in either title or description]
+```
+
+**Search is case-insensitive and matches partial words:**
+```
+> search
+Enter search keyword: proj
+Select search scope [3]: 3
+
+Found 5 task(s) matching 'proj':
+- Complete project documentation
+- Project planning meeting
+- Review project proposal
+...
+```
+
+### Delete All Tasks
+
+**Delete all tasks with confirmation:**
+```
+> delete all
+
+⚠️  WARNING: Delete All Tasks
+
+This will permanently delete ALL tasks and reset the ID counter to 1.
+This action cannot be undone.
+
+Are you sure you want to continue? (y/n): y
+
+✓ All tasks deleted successfully
+ID counter reset to 1
+```
+
+**Using the dela alias:**
+```
+> dela
+
+⚠️  WARNING: Delete All Tasks
+...
+```
+
+**Delete all with no tasks:**
+```
+> delete all
+
+No tasks to delete.
+```
+
+**Cancelling delete all:**
+```
+> delete all
+
+⚠️  WARNING: Delete All Tasks
+...
+Are you sure you want to continue? (y/n): n
+
+Delete all cancelled. No changes made.
+```
+
+### Enhanced Clear Command
+
+**Clear terminal buffer completely:**
+```
+> clear
+
+Terminal cleared successfully!
+```
+
+**Using the clr alias:**
+```
+> clr
+
+Terminal cleared successfully!
+```
+
+The enhanced clear command:
+- Properly clears the terminal buffer (not just scrolling)
+- Prevents scroll-back to previous commands
+- Uses platform-specific mechanisms (Windows: cls, Linux/macOS: ANSI codes + clear)
+- Works across Windows, Linux, and macOS
 
 ### Searching Tasks
 
