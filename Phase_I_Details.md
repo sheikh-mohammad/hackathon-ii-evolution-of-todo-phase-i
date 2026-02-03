@@ -1,3 +1,9 @@
+---
+phase: "Phase I"
+description: "In-Memory Python Console App"
+technology_stack: "Python, Claude Code, Spec-Kit Plus"
+---
+
 # **Phase I: Todo In-Memory Python Console App**
 
 *Basic Level Functionality*
