@@ -109,3 +109,30 @@ def get_category_suggestions(partial: str = "") -> list[str]:
         cat for cat in DEFAULT_CATEGORIES
         if cat.startswith(partial_lower)
     ]
+
+
+def validate_required_fields(priority: str = None, categories: list[str] = None) -> bool:
+    """
+    Validate that required fields (priority and categories) are provided.
+
+    Phase 10 - User Story 6: Make priority and categories mandatory.
+
+    Args:
+        priority: Priority string (required)
+        categories: List of category strings (required, at least one)
+
+    Returns:
+        True if all required fields are valid
+
+    Raises:
+        ValueError: If any required field is missing or invalid
+    """
+    # Check priority is provided
+    if priority is None or (isinstance(priority, str) and not priority.strip()):
+        raise ValueError("Priority is required. Must be one of: high, medium, low")
+
+    # Check categories are provided
+    if categories is None or (isinstance(categories, list) and len(categories) == 0):
+        raise ValueError("At least one category is required. Suggestions: work, home, personal")
+
+    return True

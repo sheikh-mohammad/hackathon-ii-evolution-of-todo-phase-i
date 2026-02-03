@@ -47,7 +47,7 @@ def generate_test_tasks(count: int) -> list[Task]:
     return tasks
 
 
-def test_search_performance(tasks: list[Task], search_service: SearchService) -> dict:
+def run_search_performance(tasks: list[Task], search_service: SearchService) -> dict:
     """Test search performance."""
     keywords = ["project", "documentation", "complete", "task", "feature"]
     results = {}
@@ -66,7 +66,7 @@ def test_search_performance(tasks: list[Task], search_service: SearchService) ->
     return results
 
 
-def test_filter_performance(tasks: list[Task], filter_service: FilterService) -> dict:
+def run_filter_performance(tasks: list[Task], filter_service: FilterService) -> dict:
     """Test filter performance."""
     test_cases = [
         ("status_incomplete", {"status": "incomplete"}),
@@ -92,7 +92,7 @@ def test_filter_performance(tasks: list[Task], filter_service: FilterService) ->
     return results
 
 
-def test_sort_performance(tasks: list[Task], sort_service: SortService) -> dict:
+def run_sort_performance(tasks: list[Task], sort_service: SortService) -> dict:
     """Test sort performance."""
     test_cases = [
         ("due_date", "due_date", None),
@@ -140,7 +140,7 @@ def main():
     print("-" * 70)
     print("SEARCH PERFORMANCE (Target: < 500ms)")
     print("-" * 70)
-    search_results = test_search_performance(tasks, search_service)
+    search_results = run_search_performance(tasks, search_service)
 
     for keyword, result in search_results.items():
         status = "[PASS]" if result["passed"] else "[FAIL]"
@@ -153,7 +153,7 @@ def main():
     print("-" * 70)
     print("FILTER PERFORMANCE (Target: < 300ms)")
     print("-" * 70)
-    filter_results = test_filter_performance(tasks, filter_service)
+    filter_results = run_filter_performance(tasks, filter_service)
 
     for name, result in filter_results.items():
         status = "[PASS]" if result["passed"] else "[FAIL]"
@@ -166,7 +166,7 @@ def main():
     print("-" * 70)
     print("SORT PERFORMANCE (Target: < 500ms)")
     print("-" * 70)
-    sort_results = test_sort_performance(tasks, sort_service)
+    sort_results = run_sort_performance(tasks, sort_service)
 
     for name, result in sort_results.items():
         status = "[PASS]" if result["passed"] else "[FAIL]"

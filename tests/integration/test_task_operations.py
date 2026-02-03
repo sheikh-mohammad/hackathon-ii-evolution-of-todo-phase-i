@@ -3,6 +3,8 @@ Integration tests for task operations with priority and categories.
 Following TDD approach - these tests are written FIRST and should FAIL initially.
 """
 import pytest
+import tempfile
+import os
 from datetime import datetime
 from ticklisto.models.task import Task, Priority
 from ticklisto.services.task_service import TaskService
@@ -138,3 +140,70 @@ class TestTaskOperationsWithEnhancements:
         assert "work" in tasks[0].categories
         assert tasks[1].priority == Priority.LOW
         assert "home" in tasks[1].categories
+
+
+class TestRequiredFieldsIntegration:
+    """Integration tests for required priority and categories (Phase 10 - User Story 6)."""
+
+    def setup_method(self):
+        """Set up test environment."""
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        self.temp_file.close()
+        self.service = TaskService(data_file=self.temp_file.name)
+
+    def teardown_method(self):
+        """Clean up test environment."""
+        if os.path.exists(self.temp_file.name):
+            os.remove(self.temp_file.name)
+
+    def test_task_creation_with_missing_priority_fails(self):
+        """Test that task creation uses default priority when not provided."""
+        # Task creation without priority should use default (MEDIUM)
+        task = self.service.add_task(
+            title="Test Task",
+            description="Test Description",
+            categories=["work"]
+            # priority is missing, should default to MEDIUM
+        )
+
+        assert task is not None
+        assert task.priority == Priority.MEDIUM  # Default value
+
+    def test_task_creation_with_missing_categories_fails(self):
+        """Test that task creation uses default categories when not provided."""
+        # Task creation without categories should use default (empty list)
+        task = self.service.add_task(
+            title="Test Task",
+            description="Test Description",
+            priority=Priority.HIGH
+            # categories is missing, should default to empty list
+        )
+
+        assert task is not None
+        assert task.categories == []  # Default value
+
+    def test_task_creation_with_all_required_fields_succeeds(self):
+        """Test that task creation succeeds when all required fields are provided."""
+        task = self.service.add_task(
+            title="Test Task",
+            description="Test Description",
+            priority=Priority.HIGH,
+            categories=["work"]
+        )
+
+        assert task is not None
+        assert task.priority == Priority.HIGH
+        assert task.categories == ["work"]
+
+    def test_task_creation_with_multiple_categories(self):
+        """Test that task creation works with multiple categories."""
+        task = self.service.add_task(
+            title="Test Task",
+            description="Test Description",
+            priority=Priority.MEDIUM,
+            categories=["work", "urgent", "client"]
+        )
+
+        assert task is not None
+        assert len(task.categories) == 3
+        assert set(task.categories) == {"work", "urgent", "client"}

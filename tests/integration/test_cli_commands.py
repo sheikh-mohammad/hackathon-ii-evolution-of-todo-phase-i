@@ -3,6 +3,8 @@ Integration tests for CLI commands with Rich formatting.
 Following TDD approach - these tests are written FIRST and should FAIL initially.
 """
 import pytest
+import tempfile
+import os
 from io import StringIO
 from ticklisto.models.task import Task, Priority
 from ticklisto.services.task_service import TaskService
@@ -133,3 +135,100 @@ class TestCLICommandsWithEnhancements:
 
         # Test that UI has methods for category formatting
         assert hasattr(ui, 'format_categories') or hasattr(ui, 'get_category_display')
+
+
+class TestDeleteAllCommand:
+    """Integration tests for delete all command (Phase 9 - User Story 5)."""
+
+    def setup_method(self):
+        """Set up test environment."""
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        self.temp_file.close()
+        self.service = TaskService(data_file=self.temp_file.name)
+
+    def teardown_method(self):
+        """Clean up test environment."""
+        if os.path.exists(self.temp_file.name):
+            os.remove(self.temp_file.name)
+
+    def test_delete_all_command_with_confirmation(self):
+        """Test delete all command with user confirmation."""
+        # Add tasks
+        self.service.add_task("Task 1", priority=Priority.HIGH, categories=["work"])
+        self.service.add_task("Task 2", priority=Priority.MEDIUM, categories=["home"])
+        self.service.add_task("Task 3", priority=Priority.LOW, categories=["personal"])
+
+        assert len(self.service.tasks) == 3
+
+        # Simulate delete all with confirmation
+        result = self.service.delete_all()
+        assert result is True
+
+        # Reset ID counter (as CLI would do)
+        self.service.id_manager.reset_counter()
+
+        # Verify all tasks deleted
+        assert len(self.service.tasks) == 0
+        assert self.service.id_manager.get_current_counter() == 1
+
+    def test_delete_all_command_on_empty_list(self):
+        """Test delete all command when no tasks exist."""
+        assert len(self.service.tasks) == 0
+
+        result = self.service.delete_all()
+
+        assert result is False
+        assert len(self.service.tasks) == 0
+
+    def test_delete_all_alias_dela(self):
+        """Test that 'dela' alias works for delete all command."""
+        # Add tasks
+        self.service.add_task("Task 1", priority=Priority.HIGH, categories=["work"])
+        self.service.add_task("Task 2", priority=Priority.MEDIUM, categories=["home"])
+
+        assert len(self.service.tasks) == 2
+
+        # Simulate dela command (same as delete_all)
+        result = self.service.delete_all()
+        assert result is True
+
+        # Reset ID counter
+        self.service.id_manager.reset_counter()
+
+        # Verify deletion
+        assert len(self.service.tasks) == 0
+        assert self.service.id_manager.get_current_counter() == 1
+
+    def test_new_task_after_delete_all_gets_id_one(self):
+        """Test that new task after delete all gets ID 1."""
+        # Add and delete tasks
+        self.service.add_task("Task 1", priority=Priority.HIGH, categories=["work"])
+        self.service.add_task("Task 2", priority=Priority.MEDIUM, categories=["home"])
+
+        self.service.delete_all()
+        self.service.id_manager.reset_counter()
+
+        # Add new task
+        new_task = self.service.add_task("New Task", priority=Priority.HIGH, categories=["work"])
+
+        assert new_task.id == 1
+        assert len(self.service.tasks) == 1
+
+    def test_delete_all_persists_to_storage(self):
+        """Test that delete all changes persist to storage."""
+        # Add tasks and save
+        self.service.add_task("Task 1", priority=Priority.HIGH, categories=["work"])
+        self.service.add_task("Task 2", priority=Priority.MEDIUM, categories=["home"])
+        self.service.save_to_file()
+
+        # Delete all and save
+        self.service.delete_all()
+        self.service.id_manager.reset_counter()
+        self.service.save_to_file()
+
+        # Load in new service instance
+        new_service = TaskService(data_file=self.temp_file.name)
+
+        # Verify empty task list and reset counter
+        assert len(new_service.tasks) == 0
+        assert new_service.id_manager.get_current_counter() == 1

@@ -10,6 +10,7 @@
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "context7",
-    "playwright"
+    "playwright",
+    "github"
   ]
 }

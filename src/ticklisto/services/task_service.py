@@ -6,6 +6,8 @@ from ..models.task import Task, TaskStatus, Priority
 from ..utils.file_handler import FileHandler
 from ..ui.rich_ui import RichUI
 from .progress_tracker import ProgressTracker
+from .storage_service import StorageService
+from .id_manager import IDManager
 
 
 class TaskService:
@@ -20,9 +22,15 @@ class TaskService:
         Loads existing data from file if it exists.
         """
         self.tasks: Dict[int, Task] = {}
-        self.next_id: int = 1
         self.data_file = data_file
+
+        # Initialize new services for Phase 8
+        self.storage_service = StorageService()
+        self.id_manager = IDManager()
+
+        # Keep FileHandler for backward compatibility (deprecated)
         self.file_handler = FileHandler()
+
         self.rich_ui = RichUI()  # Initialize Rich UI for enhanced display
         self.progress_tracker = ProgressTracker()  # Initialize ProgressTracker for US4 integration
 
@@ -52,9 +60,12 @@ class TaskService:
         Returns:
             Created Task object
         """
-        # Create a new task with the next available ID
+        # Generate ID using IDManager (Phase 8)
+        task_id = self.id_manager.generate_id()
+
+        # Create a new task with the generated ID
         new_task = Task(
-            id=self.next_id,
+            id=task_id,
             title=title,
             description=description,
             priority=priority,
@@ -63,8 +74,7 @@ class TaskService:
             status=TaskStatus.PENDING  # Default to pending status
         )
 
-        self.tasks[self.next_id] = new_task
-        self.next_id += 1
+        self.tasks[task_id] = new_task
 
         # Update progress tracking when task is added
         self.update_progress_on_task_change()
@@ -227,38 +237,63 @@ class TaskService:
         return True
 
     def save_to_file(self):
-        """Save all tasks and next_id to the data file."""
+        """Save all tasks and next_id to the data file using StorageService (Phase 8)."""
         data = {
             "tasks": [task.to_dict() for task in self.tasks.values()],
-            "next_id": self.next_id
+            "next_id": self.id_manager.get_current_counter()
         }
-        self.file_handler.save_data(self.data_file, data)
+        self.storage_service.save_to_json(data, self.data_file)
 
     def load_from_file(self):
-        """Load tasks and next_id from the data file."""
+        """Load tasks and next_id from the data file using StorageService (Phase 8)."""
         try:
-            data = self.file_handler.load_data(self.data_file)
+            # Use new StorageService for loading
+            data = self.storage_service.load_from_json(self.data_file)
+
             if data and "tasks" in data and "next_id" in data:
                 self.tasks = {}
                 for task_data in data["tasks"]:
                     task = Task.from_dict(task_data)
                     self.tasks[task.id] = task
 
-                self.next_id = data["next_id"]
+                # Set ID counter from loaded data
+                self.id_manager.set_counter(data["next_id"])
 
                 # Update progress tracking after loading tasks
                 self.update_progress_on_task_change()
-        except FileNotFoundError:
-            # If file doesn't exist, we'll start with empty data
-            pass
-        except Exception:
-            # If there's any error loading the file, start with empty data
-            print(f"Warning: Could not load data from {self.data_file}. Starting with empty task list.")
+        except ValueError as e:
+            # If there's a validation error, start with empty data
+            print(f"Warning: Could not load data from {self.data_file}: {e}. Starting with empty task list.")
             self.tasks = {}
-            self.next_id = 1
+            self.id_manager.reset_counter()
 
             # Update progress tracking with empty data
             self.update_progress_on_task_change()
+        except Exception as e:
+            # If there's any other error loading the file, start with empty data
+            print(f"Warning: Could not load data from {self.data_file}. Starting with empty task list.")
+            self.tasks = {}
+            self.id_manager.reset_counter()
+
+            # Update progress tracking with empty data
+            self.update_progress_on_task_change()
+
+    def delete_all(self) -> bool:
+        """
+        Delete all tasks from the task list (Phase 8 - User Story 5).
+
+        Returns:
+            True if tasks were deleted, False if no tasks exist
+        """
+        if not self.tasks:
+            return False
+
+        self.tasks = {}
+
+        # Update progress tracking after deletion
+        self.update_progress_on_task_change()
+
+        return True
 
     def display_all_tasks_enhanced(self):
         """

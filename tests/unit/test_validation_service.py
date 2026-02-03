@@ -207,3 +207,58 @@ class TestGetCategorySuggestions:
         """Test that suggestions are case-insensitive."""
         result = get_category_suggestions("WO")
         assert "work" in result
+
+
+class TestRequiredFieldValidation:
+    """Unit tests for required field validation (Phase 10 - User Story 6)."""
+
+    def test_validate_required_fields_with_all_fields(self):
+        """Test validation passes when all required fields are provided."""
+        from ticklisto.services.validation_service import validate_required_fields
+        
+        result = validate_required_fields(
+            priority="high",
+            categories=["work"]
+        )
+        
+        assert result is True
+
+    def test_validate_required_fields_missing_priority(self):
+        """Test validation fails when priority is missing."""
+        from ticklisto.services.validation_service import validate_required_fields
+        
+        with pytest.raises(ValueError, match="Priority is required"):
+            validate_required_fields(
+                priority=None,
+                categories=["work"]
+            )
+
+    def test_validate_required_fields_missing_categories(self):
+        """Test validation fails when categories are missing."""
+        from ticklisto.services.validation_service import validate_required_fields
+        
+        with pytest.raises(ValueError, match="At least one category is required"):
+            validate_required_fields(
+                priority="high",
+                categories=None
+            )
+
+    def test_validate_required_fields_empty_categories(self):
+        """Test validation fails when categories list is empty."""
+        from ticklisto.services.validation_service import validate_required_fields
+        
+        with pytest.raises(ValueError, match="At least one category is required"):
+            validate_required_fields(
+                priority="high",
+                categories=[]
+            )
+
+    def test_validate_required_fields_both_missing(self):
+        """Test validation fails when both required fields are missing."""
+        from ticklisto.services.validation_service import validate_required_fields
+        
+        with pytest.raises(ValueError, match="Priority is required"):
+            validate_required_fields(
+                priority=None,
+                categories=None
+            )
