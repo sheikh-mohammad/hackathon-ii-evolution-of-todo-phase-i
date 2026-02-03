@@ -4,8 +4,8 @@ These tests verify that the CLI interface conforms to the expected contract/beha
 """
 
 import pytest
-from src.ticklisto.cli.ticklisto_cli import TickListoCLI
-from src.ticklisto.services.task_service import TaskService
+from ticklisto.cli.ticklisto_cli import TickListoCLI
+from ticklisto.services.task_service import TaskService
 
 
 class TestCLIContract:
@@ -16,7 +16,7 @@ class TestCLIContract:
         self.cli = TickListoCLI()
         # Clear tasks for a clean test environment
         self.cli.task_service.tasks = {}
-        self.cli.task_service.next_id = 1
+        self.cli.task_service.id_manager.reset_counter()
 
     def test_add_command_contract(self):
         """Test that the add command follows the expected contract."""
@@ -51,15 +51,14 @@ class TestCLIContract:
         task = self.cli.task_service.add_task("Original Task", "Original Description")
 
         # Update the task
-        success = self.cli.task_service.update(
+        updated_task = self.cli.task_service.update_task(
             task.id,
             title="Updated Task",
             description="Updated Description"
         )
 
         # Verify update was successful
-        assert success is True
-        updated_task = self.cli.task_service.get_by_id(task.id)
+        assert updated_task is not None
         assert updated_task.title == "Updated Task"
         assert updated_task.description == "Updated Description"
 
@@ -69,7 +68,7 @@ class TestCLIContract:
         task = self.cli.task_service.add_task("Task to Delete", "Description")
 
         # Delete the task
-        success = self.cli.task_service.delete(task.id)
+        success = self.cli.task_service.delete_task(task.id)
 
         # Verify deletion was successful
         assert success is True
@@ -103,8 +102,8 @@ class TestCLIContract:
         assert len(tasks) >= 1
 
         # Update command should work
-        success = self.cli.task_service.update(task.id, title="Updated via Alias Test")
-        assert success is True
+        updated_task = self.cli.task_service.update_task(task.id, title="Updated via Alias Test")
+        assert updated_task is not None
 
         # Verify update worked
         updated_task = self.cli.task_service.get_by_id(task.id)
@@ -113,11 +112,11 @@ class TestCLIContract:
     def test_error_handling_contract(self):
         """Test that error handling follows the expected contract."""
         # Attempt to update non-existent task
-        success = self.cli.task_service.update(9999, title="Should fail")
-        assert success is False
+        result = self.cli.task_service.update_task(9999, title="Should fail")
+        assert result is None
 
         # Attempt to delete non-existent task
-        success = self.cli.task_service.delete(9999)
+        success = self.cli.task_service.delete_task(9999)
         assert success is False
 
         # Attempt to get non-existent task

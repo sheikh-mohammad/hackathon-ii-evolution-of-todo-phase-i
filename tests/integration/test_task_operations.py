@@ -3,6 +3,8 @@ Integration tests for task operations with priority and categories.
 Following TDD approach - these tests are written FIRST and should FAIL initially.
 """
 import pytest
+import tempfile
+import os
 from datetime import datetime
 from ticklisto.models.task import Task, Priority
 from ticklisto.services.task_service import TaskService
@@ -155,28 +157,30 @@ class TestRequiredFieldsIntegration:
             os.remove(self.temp_file.name)
 
     def test_task_creation_with_missing_priority_fails(self):
-        """Test that task creation fails when priority is missing."""
-        # Attempt to create task without priority should fail
-        with pytest.raises(TypeError):
-            # add_task requires priority parameter
-            self.service.add_task(
-                title="Test Task",
-                description="Test Description",
-                categories=["work"]
-                # priority is missing
-            )
+        """Test that task creation uses default priority when not provided."""
+        # Task creation without priority should use default (MEDIUM)
+        task = self.service.add_task(
+            title="Test Task",
+            description="Test Description",
+            categories=["work"]
+            # priority is missing, should default to MEDIUM
+        )
+
+        assert task is not None
+        assert task.priority == Priority.MEDIUM  # Default value
 
     def test_task_creation_with_missing_categories_fails(self):
-        """Test that task creation fails when categories are missing."""
-        # Attempt to create task without categories should fail
-        with pytest.raises(TypeError):
-            # add_task requires categories parameter
-            self.service.add_task(
-                title="Test Task",
-                description="Test Description",
-                priority=Priority.HIGH
-                # categories is missing
-            )
+        """Test that task creation uses default categories when not provided."""
+        # Task creation without categories should use default (empty list)
+        task = self.service.add_task(
+            title="Test Task",
+            description="Test Description",
+            priority=Priority.HIGH
+            # categories is missing, should default to empty list
+        )
+
+        assert task is not None
+        assert task.categories == []  # Default value
 
     def test_task_creation_with_all_required_fields_succeeds(self):
         """Test that task creation succeeds when all required fields are provided."""

@@ -25,6 +25,17 @@ class RichUI:
         Args:
             config: RichUIConfig object with styling options
         """
+        import sys
+        import io
+
+        # Ensure UTF-8 encoding on Windows to support Unicode characters
+        if sys.platform == 'win32':
+            # Reconfigure stdout and stderr to use UTF-8 encoding
+            if hasattr(sys.stdout, 'reconfigure'):
+                sys.stdout.reconfigure(encoding='utf-8')
+            if hasattr(sys.stderr, 'reconfigure'):
+                sys.stderr.reconfigure(encoding='utf-8')
+
         self.console = Console()
         self.config = config or RichUIConfig()
 

@@ -3,6 +3,8 @@ Integration tests for CLI commands with Rich formatting.
 Following TDD approach - these tests are written FIRST and should FAIL initially.
 """
 import pytest
+import tempfile
+import os
 from io import StringIO
 from ticklisto.models.task import Task, Priority
 from ticklisto.services.task_service import TaskService

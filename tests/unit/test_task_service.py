@@ -3,8 +3,8 @@ import os
 import tempfile
 from datetime import datetime
 from unittest.mock import Mock, patch
-from src.ticklisto.services.task_service import TaskService
-from src.ticklisto.models.task import Task, Priority
+from ticklisto.services.task_service import TaskService
+from ticklisto.models.task import Task, Priority
 
 
 class TestTaskService:
@@ -50,26 +50,20 @@ class TestTaskService:
 
     def test_add_task_invalid_title(self):
         """Test adding a task with invalid title."""
-        task = self.service.add_task("", "Test Description")
-
-        assert task is None
-        assert len(self.service.tasks) == 0
+        with pytest.raises(ValueError):
+            task = self.service.add_task("", "Test Description")
 
     def test_add_task_invalid_title_length(self):
         """Test adding a task with title too long."""
         long_title = "A" * 201
-        task = self.service.add_task(long_title, "Test Description")
-
-        assert task is None
-        assert len(self.service.tasks) == 0
+        with pytest.raises(ValueError):
+            task = self.service.add_task(long_title, "Test Description")
 
     def test_add_task_invalid_description_length(self):
         """Test adding a task with description too long."""
         long_description = "A" * 1001
-        task = self.service.add_task("Test Task", long_description)
-
-        assert task is None
-        assert len(self.service.tasks) == 0
+        with pytest.raises(ValueError):
+            task = self.service.add_task("Test Task", long_description)
 
     def test_get_all_empty_list(self):
         """Test getting all tasks when list is empty."""
@@ -109,10 +103,9 @@ class TestTaskService:
         """Test updating a task successfully."""
         task = self.service.add_task("Original Task", "Original Description")
 
-        success = self.service.update(task.id, title="Updated Task", description="Updated Description")
+        updated_task = self.service.update_task(task.id, title="Updated Task", description="Updated Description")
 
-        assert success is True
-        updated_task = self.service.get_by_id(task.id)
+        assert updated_task is not None
         assert updated_task.title == "Updated Task"
         assert updated_task.description == "Updated Description"
 
@@ -120,26 +113,26 @@ class TestTaskService:
         """Test updating only some fields of a task."""
         task = self.service.add_task("Original Task", "Original Description")
 
-        success = self.service.update(task.id, title="Updated Task")
+        updated_task = self.service.update_task(task.id, title="Updated Task")
 
-        assert success is True
-        updated_task = self.service.get_by_id(task.id)
+        assert updated_task is not None
         assert updated_task.title == "Updated Task"
         assert updated_task.description == "Original Description"  # Should remain unchanged
 
     def test_update_task_not_exists(self):
         """Test updating a task that doesn't exist."""
-        success = self.service.update(999, title="Updated Task")
+        result = self.service.update_task(999, title="Updated Task")
 
-        assert success is False
+        assert result is None
 
     def test_update_task_invalid_data(self):
         """Test updating a task with invalid data."""
         task = self.service.add_task("Original Task", "Original Description")
 
-        success = self.service.update(task.id, title="")  # Invalid title
+        # Invalid title should raise ValueError
+        with pytest.raises(ValueError):
+            self.service.update_task(task.id, title="")  # Invalid title
 
-        assert success is False
         # Original task should remain unchanged
         original_task = self.service.get_by_id(task.id)
         assert original_task.title == "Original Task"
@@ -148,7 +141,7 @@ class TestTaskService:
         """Test deleting a task successfully."""
         task = self.service.add_task("Test Task", "Description")
 
-        success = self.service.delete(task.id)
+        success = self.service.delete_task(task.id)
 
         assert success is True
         assert len(self.service.tasks) == 0
@@ -156,7 +149,7 @@ class TestTaskService:
 
     def test_delete_task_not_exists(self):
         """Test deleting a task that doesn't exist."""
-        success = self.service.delete(999)
+        success = self.service.delete_task(999)
 
         assert success is False
 

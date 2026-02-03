@@ -154,8 +154,8 @@ class TestSearchWithScope:
 
     def test_search_in_title_only(self):
         """Test searching in title only."""
-        from src.ticklisto.services.search_service import search_tasks_with_scope
-        from src.ticklisto.models.task import Task, Priority
+        from ticklisto.services.search_service import search_tasks_with_scope
+        from ticklisto.models.task import Task, Priority
         
         tasks = [
             Task(id=1, title="Work Report", description="Home assignment", priority=Priority.HIGH, categories=["work"]),
@@ -171,8 +171,8 @@ class TestSearchWithScope:
 
     def test_search_in_description_only(self):
         """Test searching in description only."""
-        from src.ticklisto.services.search_service import search_tasks_with_scope
-        from src.ticklisto.models.task import Task, Priority
+        from ticklisto.services.search_service import search_tasks_with_scope
+        from ticklisto.models.task import Task, Priority
         
         tasks = [
             Task(id=1, title="Work Report", description="Home assignment", priority=Priority.HIGH, categories=["work"]),
@@ -188,8 +188,8 @@ class TestSearchWithScope:
 
     def test_search_in_both_fields(self):
         """Test searching in both title and description."""
-        from src.ticklisto.services.search_service import search_tasks_with_scope
-        from src.ticklisto.models.task import Task, Priority
+        from ticklisto.services.search_service import search_tasks_with_scope
+        from ticklisto.models.task import Task, Priority
         
         tasks = [
             Task(id=1, title="Work Report", description="Home assignment", priority=Priority.HIGH, categories=["work"]),
@@ -205,8 +205,8 @@ class TestSearchWithScope:
 
     def test_search_with_invalid_scope_raises_error(self):
         """Test that invalid scope raises ValueError."""
-        from src.ticklisto.services.search_service import search_tasks_with_scope
-        from src.ticklisto.models.task import Task, Priority
+        from ticklisto.services.search_service import search_tasks_with_scope
+        from ticklisto.models.task import Task, Priority
         
         tasks = [
             Task(id=1, title="Test", description="Test", priority=Priority.HIGH, categories=["work"])

@@ -2,8 +2,8 @@ import pytest
 import io
 import sys
 from unittest.mock import patch, MagicMock
-from src.ticklisto.cli.ticklisto_cli import TickListoCLI
-from src.ticklisto.services.task_service import TaskService
+from ticklisto.cli.ticklisto_cli import TickListoCLI
+from ticklisto.services.task_service import TaskService
 
 
 class TestCLIIntegration:
@@ -14,7 +14,7 @@ class TestCLIIntegration:
         self.cli = TickListoCLI()
         # Clear tasks for a clean test environment
         self.cli.task_service.tasks = {}
-        self.cli.task_service.next_id = 1
+        self.cli.task_service.id_manager.reset_counter()
 
     def test_add_and_view_single_task(self):
         """Test adding a task and then viewing it."""
@@ -70,10 +70,10 @@ class TestCLIIntegration:
         assert task.description == "Original Description"
 
         # Update the task
-        success = self.cli.task_service.update(task.id, title="Updated Task", description="Updated Description")
+        updated_task = self.cli.task_service.update_task(task.id, title="Updated Task", description="Updated Description")
 
         # Verify the update was successful
-        assert success is True
+        assert updated_task is not None
 
         # Get the updated task
         updated_task = self.cli.task_service.get_by_id(task.id)
@@ -93,7 +93,7 @@ class TestCLIIntegration:
         assert task.id in self.cli.task_service.tasks
 
         # Delete the task
-        success = self.cli.task_service.delete(task.id)
+        success = self.cli.task_service.delete_task(task.id)
 
         # Verify the deletion was successful
         assert success is True
@@ -190,4 +190,4 @@ class TestCLIIntegration:
         assert len(loaded_tasks) == 2
         assert loaded_tasks[0].title == "Persistent Task 1"
         assert loaded_tasks[1].title == "Persistent Task 2"
-        assert new_service.next_id == 3  # Should be 3 since we added 2 tasks
+        assert new_service.id_manager.get_current_counter() == 3  # Should be 3 since we added 2 tasks
