@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ticklisto.example.com/schemas/reminder.json",
+  "title": "Reminder",
+  "description": "A scheduled reminder for a task",
+  "type": "object",
+  "required": ["id", "task_id", "reminder_time", "offset_from_due", "status", "retry_count"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique reminder identifier"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Associated task ID"
+    },
+    "reminder_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When to send reminder (ISO 8601 datetime in UTC)"
+    },
+    "offset_from_due": {
+      "type": "string",
+      "pattern": "^-\\d+[mhdw]$",
+      "description": "Time before due date (e.g., -1h, -1d, -1w)",
+      "examples": ["-15m", "-30m", "-1h", "-2h", "-1d", "-1w"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "sent", "failed"],
+      "description": "Reminder status"
+    },
+    "sent_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When reminder was sent (ISO 8601 datetime in UTC)"
+    },
+    "error_message": {
+      "type": ["string", "null"],
+      "maxLength": 500,
+      "description": "Error message if sending failed"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Number of retry attempts (max 1)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "sent" } }
+      },
+      "then": {
+        "required": ["sent_at"],
+        "properties": {
+          "sent_at": { "type": "string" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "failed" } }
+      },
+      "then": {
+        "required": ["error_message"],
+        "properties": {
+          "error_message": { "type": "string" }
+        }
+      }
+    }
+  ]
+}

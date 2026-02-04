@@ -5,6 +5,21 @@
 **Status**: Draft
 **Input**: User description: "Advanced Level features: Recurring Tasks, Due Dates & Time Reminders with Gmail API notifications"
 
+## Clarifications
+
+### Session 2026-02-04
+
+- Q: How should Gmail API credentials and tokens be stored to ensure security? → A: Store credentials in .env file with paths in .gitignore
+- Q: How should the reminder checking mechanism work? → A: Background daemon/service that runs separately from the main CLI application
+- Q: For weekly recurring tasks, how should the day of the week be determined? → A: Prompt user to explicitly select which day of week for weekly recurrence
+- Q: For monthly recurring tasks, how should the system handle months with fewer days than the original due date? → A: Use the last day of the month when the specific day doesn't exist
+- Q: What format should users enter for dates and times when creating or updating tasks? → A: Flexible parsing supporting multiple formats
+- Q: How should the reminder daemon handle startup, crashes, and system restarts? → A: Auto-start on system boot with crash recovery and automatic restart
+- Q: What reminder time offset options should be available to users? → A: Predefined common options with ability to enter custom offset
+- Q: How should the system handle ambiguous date inputs like "02/03/2026"? → A: Always prompt user to clarify when format is ambiguous
+- Q: Should the system support custom recurrence intervals (e.g., "every 2 weeks", "every 3 days")? → A: Support intervals for all patterns (every N days/weeks/months/years) with reasonable limits
+- Q: Should users be able to set end conditions for recurring tasks? → A: Support both end date and occurrence count as optional end conditions
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Task Scheduling with Due Dates and Times (Priority: P1)
@@ -70,9 +85,15 @@ As a Ticklisto user, I want to receive email reminders for upcoming tasks so tha
 - **Timezone handling**: How are due dates and times stored and displayed across different timezones? Store in UTC, display in system local time.
 - **Concurrent task modifications**: What happens if a recurring task is modified while the system is auto-creating the next instance? Use file locking or atomic operations to prevent data corruption.
 - **Email delivery failures**: What happens if Gmail API returns an error when sending a reminder? Log the failure, retry once after 5 minutes, then mark as failed and notify user in console.
-- **Reminder timing precision**: How precise should reminder timing be? System should check for due reminders every minute and send within 60 seconds of scheduled time.
+- **Reminder timing precision**: How precise should reminder timing be? Background daemon checks for due reminders every minute and sends within 60 seconds of scheduled time.
 - **Multiple recurrence patterns**: Can a task have multiple recurrence patterns (e.g., "every Monday and Friday")? Initial implementation supports single pattern only; document as future enhancement.
 - **Task completion without due date**: What happens when a recurring task without a due date is marked complete? System should prevent creating recurring tasks without due dates.
+- **Weekly recurrence day selection**: For weekly recurring tasks, user explicitly selects which day(s) of the week during task creation.
+- **Monthly recurrence edge cases**: For monthly recurring tasks on day 29-31, system uses the last day of months with fewer days (e.g., Jan 31 → Feb 28/29, Mar 31).
+- **Ambiguous date input**: When user enters ambiguous dates (e.g., "02/03/2026" could be Feb 3 or Mar 2), system must prompt user to clarify the intended date before accepting the input.
+- **Daemon crash recovery**: If the reminder daemon crashes, it must automatically restart and resume checking for due reminders without losing state.
+- **Recurring task end condition reached**: When a recurring task reaches its end date or occurrence count limit, system must mark it as completed and stop creating new instances.
+- **Custom interval validation**: System must validate custom recurrence intervals are within reasonable limits and reject invalid values (e.g., "every 0 days" or "every 1000 weeks").
 
 ## Requirements *(mandatory)*
 
@@ -91,9 +112,12 @@ As a Ticklisto user, I want to receive email reminders for upcoming tasks so tha
 
 #### Recurring Tasks
 - **FR-010**: System MUST allow users to specify a recurrence pattern when creating or updating a task with a due date
-- **FR-011**: System MUST support the following recurrence patterns: daily, weekly, monthly, yearly
+- **FR-011**: System MUST support the following recurrence patterns: daily, weekly (with explicit day-of-week selection), monthly, yearly, with custom intervals (e.g., every 2 days, every 3 weeks, every 6 months)
+- **FR-011a**: System MUST enforce reasonable interval limits: daily (1-365 days), weekly (1-52 weeks), monthly (1-24 months), yearly (1-10 years)
+- **FR-011b**: System MUST allow users to optionally set end conditions for recurring tasks: end date (repeat until specific date) or occurrence count (repeat N times), or no end condition (repeat indefinitely)
 - **FR-012**: System MUST prevent creating recurring tasks without a due date
 - **FR-013**: System MUST automatically create a new task instance when a recurring task is marked complete
+- **FR-013a**: System MUST stop creating new instances when a recurring task reaches its end date or occurrence count limit
 - **FR-014**: System MUST calculate the next due date based on the recurrence pattern and the original due date (not completion date)
 - **FR-015**: System MUST preserve task properties (title, description, priority, tags, recurrence pattern) when creating the next instance
 - **FR-016**: System MUST maintain a completion history showing when each instance was completed
@@ -101,13 +125,14 @@ As a Ticklisto user, I want to receive email reminders for upcoming tasks so tha
 - **FR-018**: System MUST allow users to delete a single instance or all future instances of a recurring task
 - **FR-019**: System MUST display recurrence information clearly (e.g., "Repeats: Daily", "Next: 2026-02-05 09:00")
 - **FR-020**: System MUST allow users to convert a non-recurring task to recurring and vice versa
+- **FR-021**: System MUST handle monthly recurrence edge cases by using the last day of the month when the original day doesn't exist (e.g., Jan 31 → Feb 28/29)
 
 #### Email Reminders
-- **FR-021**: System MUST allow users to configure Gmail API credentials for sending reminder emails
-- **FR-022**: System MUST allow users to specify their email address for receiving reminders
-- **FR-023**: System MUST allow users to optionally set reminder times for tasks with due dates (e.g., "15 minutes before", "1 hour before", "1 day before")
+- **FR-021**: System MUST allow users to configure Gmail API credentials for sending reminder emails, stored in .env file with credential file paths excluded via .gitignore
+- **FR-022**: System MUST allow users to specify their email address for receiving reminders in .env configuration
+- **FR-023**: System MUST allow users to optionally set reminder times for tasks with due dates, offering predefined common options (15 minutes, 30 minutes, 1 hour, 2 hours, 1 day, 1 week before) with ability to enter custom time offsets
 - **FR-024**: System MUST support multiple reminder times per task (e.g., "1 day before" and "1 hour before")
-- **FR-025**: System MUST check for due reminders at least once per minute
+- **FR-025**: System MUST provide a background daemon/service that checks for due reminders at least once per minute, running independently of the CLI application, with auto-start on system boot, crash recovery, and automatic restart capabilities
 - **FR-026**: System MUST send reminder emails via Gmail API when the reminder time is reached
 - **FR-027**: System MUST include task title, description, due date/time, and priority in reminder emails
 - **FR-028**: System MUST consolidate multiple reminders due within the same minute into a single email
@@ -116,16 +141,17 @@ As a Ticklisto user, I want to receive email reminders for upcoming tasks so tha
 - **FR-031**: System MUST retry failed reminder sends once after 5 minutes, then mark as failed
 - **FR-032**: System MUST allow users to disable reminders globally or per-task
 - **FR-033**: System MUST automatically schedule reminders for new instances of recurring tasks
+- **FR-034**: System MUST provide commands to start, stop, restart, and check status of the reminder daemon service
 
 #### Data Persistence
-- **FR-034**: System MUST persist all due date, time, recurrence, and reminder data in the JSON data file
-- **FR-035**: System MUST maintain backward compatibility with existing task data (tasks without due dates/recurrence)
-- **FR-036**: System MUST validate date/time formats on input and reject invalid values with clear error messages
-- **FR-037**: System MUST handle JSON file corruption gracefully with backup and recovery options
+- **FR-035**: System MUST persist all due date, time, recurrence, and reminder data in the JSON data file
+- **FR-036**: System MUST maintain backward compatibility with existing task data (tasks without due dates/recurrence)
+- **FR-037**: System MUST support flexible date/time input parsing, accepting multiple formats (ISO 8601, US format MM/DD/YYYY, European format DD/MM/YYYY, and common variations) and validate with clear error messages for invalid inputs
+- **FR-038**: System MUST handle JSON file corruption gracefully with backup and recovery options
 
 #### User Interface
-- **FR-038**: System MUST provide clear, intuitive prompts for entering due dates and times using Rich library formatting
-- **FR-039**: System MUST display tasks with due dates in a visually distinct format (e.g., colored text, icons)
+- **FR-039**: System MUST provide clear, intuitive prompts for entering due dates and times using Rich library formatting, accepting flexible input formats (ISO 8601, US, European, and common variations)
+- **FR-040**: System MUST display tasks with due dates in a visually distinct format (e.g., colored text, icons)
 - **FR-040**: System MUST show overdue tasks prominently (e.g., red text, warning icon)
 - **FR-041**: System MUST provide a command to view all recurring tasks and their next scheduled dates
 - **FR-042**: System MUST provide a command to view upcoming tasks grouped by time period (today, tomorrow, this week)
@@ -196,9 +222,11 @@ As a Ticklisto user, I want to receive email reminders for upcoming tasks so tha
 
 ### Technical Dependencies
 - Python datetime and timezone handling libraries (datetime, pytz, or zoneinfo)
+- Flexible date parsing library (python-dateutil or similar) for accepting multiple date/time input formats
 - JSON serialization/deserialization for complex date/time objects
 - File locking mechanism for concurrent access protection (if needed)
-- Background task scheduling or periodic checking mechanism for reminders
+- Background daemon/service implementation for reminder checking (separate process management)
+- Environment variable management library (python-dotenv) for .env file handling
 
 ## Out of Scope *(optional)*
 
