@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ticklisto.example.com/schemas/recurrence.json",
+  "title": "RecurrencePattern",
+  "description": "Defines how a recurring task repeats",
+  "type": "object",
+  "required": ["pattern_type", "interval"],
+  "properties": {
+    "pattern_type": {
+      "type": "string",
+      "enum": ["daily", "weekly", "monthly", "yearly"],
+      "description": "Recurrence frequency"
+    },
+    "interval": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Repeat every N units (e.g., every 2 days, every 3 weeks)"
+    },
+    "weekdays": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 6
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Days of week for weekly recurrence (0=Monday, 6=Sunday)"
+    },
+    "end_date": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When recurrence stops (ISO 8601 datetime in UTC)"
+    },
+    "occurrences_count": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Number of occurrences before stopping"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "pattern_type": { "const": "daily" } }
+      },
+      "then": {
+        "properties": {
+          "interval": { "maximum": 365 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "pattern_type": { "const": "weekly" } }
+      },
+      "then": {
+        "required": ["weekdays"],
+        "properties": {
+          "interval": { "maximum": 52 },
+          "weekdays": { "type": "array" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "pattern_type": { "const": "monthly" } }
+      },
+      "then": {
+        "properties": {
+          "interval": { "maximum": 24 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "pattern_type": { "const": "yearly" } }
+      },
+      "then": {
+        "properties": {
+          "interval": { "maximum": 10 }
+        }
+      }
+    }
+  ],
+  "not": {
+    "required": ["end_date", "occurrences_count"],
+    "description": "Cannot have both end_date and occurrences_count"
+  }
+}
