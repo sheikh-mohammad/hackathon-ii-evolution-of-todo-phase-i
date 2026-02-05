@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ticklisto.example.com/schemas/task.json",
+  "title": "Task",
+  "description": "A task or to-do item with optional due dates, recurrence, and reminders",
+  "type": "object",
+  "required": ["id", "title", "status", "is_recurring", "created_at", "updated_at"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique task identifier"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Task title"
+    },
+    "description": {
+      "type": ["string", "null"],
+      "maxLength": 2000,
+      "description": "Task description"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["incomplete", "complete"],
+      "description": "Task completion status"
+    },
+    "priority": {
+      "type": ["string", "null"],
+      "enum": ["high", "medium", "low", null],
+      "description": "Task priority level"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50
+      },
+      "default": [],
+      "description": "Task categories or labels"
+    },
+    "due_date": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When task is due (ISO 8601 datetime in UTC)"
+    },
+    "recurrence_pattern": {
+      "oneOf": [
+        { "$ref": "recurrence-schema.json" },
+        { "type": "null" }
+      ],
+      "description": "How task repeats (if recurring)"
+    },
+    "is_recurring": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether task recurs"
+    },
+    "parent_task_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Original task ID for recurring instances"
+    },
+    "completion_history": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "default": [],
+      "description": "Timestamps when each recurring instance was completed"
+    },
+    "reminders": {
+      "type": "array",
+      "items": {
+        "$ref": "reminder-schema.json"
+      },
+      "default": [],
+      "description": "Scheduled reminders for this task"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When task was created (ISO 8601 datetime in UTC)"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When task was last modified (ISO 8601 datetime in UTC)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "is_recurring": { "const": true } }
+      },
+      "then": {
+        "required": ["due_date", "recurrence_pattern"],
+        "properties": {
+          "due_date": { "type": "string" },
+          "recurrence_pattern": { "not": { "type": "null" } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "reminders": { "minItems": 1 } }
+      },
+      "then": {
+        "required": ["due_date"],
+        "properties": {
+          "due_date": { "type": "string" }
+        }
+      }
+    }
+  ]
+}
